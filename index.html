@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directorio Telefónico</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; }
+#sidebar { width:30%; background:#f7f7f7; padding:15px; box-sizing:border-box; overflow-y:auto; border-right:1px solid #ccc; transition:transform 0.3s ease; }
+#map { flex:1; }
+h2 { margin-top:0; }
+input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box; }
+.accordion { background:#e9ecef; padding:10px; cursor:pointer; margin-bottom:5px; border:none; text-align:left; outline:none; font-size:16px; border-radius:4px; }
+.panel { display:none; padding:10px; background:#fff; margin-bottom:10px; border-radius:4px; }
+.contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; }
+.contact strong { font-size:14px; }
+.buttons button { margin-right:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
+.btn-call { background:#28a745; color:#fff; }
+.btn-email { background:#007bff; color:#fff; }
+.btn-route { background:#ff9800; color:#fff; }
+#btnExport { background:#6c757d; color:#fff; }
+
+/* Responsive */
+@media(max-width:768px){
+  #sidebar{
+    position:fixed; top:0; left:0; width:80%; max-width:300px; height:100%;
+    transform:translateX(-100%); z-index:999; background:#f7f7f7; box-shadow:2px 0 5px rgba(0,0,0,0.3);
+  }
+  #sidebar.show { transform:translateX(0); }
+  #map{ flex:none; width:100%; height:100vh; }
+  #menu-btn{
+    display:block; position:fixed; top:15px; left:15px;
+    background:#007bff; color:#fff; border:none; padding:10px 15px;
+    font-size:18px; border-radius:4px; z-index:1000; cursor:pointer;
+  }
+}
+#menu-btn{ display:none; }
+
+/* FAB botón de ubicación */
+#locate-btn {
+  position: fixed; bottom: 20px; right: 20px;
+  width: 50px; height: 50px;
+  background: #007bff; color: #fff;
+  border: none; border-radius: 50%;
+  font-size: 22px; cursor: pointer;
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+#locate-btn:hover { background:#0056b3; }
+</style>
+</head>
+<body>
+
+<!-- Botón hamburguesa -->
+<button id="menu-btn">☰</button>
+
+<!-- Sidebar -->
+<div id="sidebar">
+<h2>Directorio Telefónico</h2>
+<input type="text" id="search" placeholder="Buscar por nombre o institución">
+<select id="filterInstitucion"><option value="">Filtrar por Institución</option></select>
+<select id="filterArea"><option value="">Filtrar por Área</option></select>
+<select id="groupBy">
+  <option value="">Sin agrupar</option>
+  <option value="institucion">Agrupar por Institución</option>
+  <option value="sede">Agrupar por Sede</option>
+</select>
+<button id="btnExport">Exportar CSV</button>
+<div id="list"></div>
+</div>
+
+<!-- Mapa -->
+<div id="map"></div>
+
+<!-- Botón FAB -->
+<button id="locate-btn" title="Mostrar mi ubicación">📍</button>
+
+<script>
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pub?gid=0&single=true&output=csv"; // Reemplaza con el enlace CSV público
+let contacts = [], map, markers = [], markerCluster, userMarker=null;
+
+async function loadData(){
+  const response = await fetch(SHEET_URL);
+  const data = await response.text();
+  const delimiter = data.includes(";") ? ";" : ",";
+  const rows = data.trim().split("\n").slice(1);
+
+  contacts = rows.map(r=>{
+    const cols=r.split(delimiter);
+    return {
+      institucion:cols[0], cargo:cols[1], nombre:cols[2],
+      correo:cols[3], telefono:cols[4], area:cols[5],
+      sede:cols[6], ubicacion:cols[7],
+      lat:parseFloat(cols[8]), lng:parseFloat(cols[9])
+    };
+  }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
+
+  populateFilters();
+  initMap();
+  renderContacts(contacts);
+}
+
+function populateFilters(){
+  const instSelect=document.getElementById("filterInstitucion");
+  const areaSelect=document.getElementById("filterArea");
+  [...new Set(contacts.map(c=>c.institucion))].forEach(inst=>{
+    let opt=document.createElement("option"); opt.value=inst; opt.textContent=inst; instSelect.appendChild(opt);
+  });
+  [...new Set(contacts.map(c=>c.area))].forEach(area=>{
+    let opt=document.createElement("option"); opt.value=area; opt.textContent=area; areaSelect.appendChild(opt);
+  });
+}
+
+function initMap(){
+  map=new google.maps.Map(document.getElementById("map"),{ zoom:6, center:{lat:-12.0464,lng:-77.0428} });
+  updateMarkers(contacts);
+}
+
+function updateMarkers(data){
+  markers.forEach(m=>m.setMap(null));
+  markers=[];
+  if(markerCluster) markerCluster.clearMarkers();
+
+  data.forEach(c=>{
+    let marker=new google.maps.Marker({ position:{lat:c.lat,lng:c.lng}, title:c.nombre });
+    let info=new google.maps.InfoWindow({
+      content:`
+      <div style="font-size:14px;">
+        <strong>${c.nombre}</strong><br>
+        ${c.cargo} - ${c.institucion}<br>
+        📍 ${c.sede}<br><br>
+        <a href="tel:${c.telefono}" style="display:inline-block;padding:6px 12px;background:#28a745;color:#fff;border-radius:4px;text-decoration:none;">📞 Llamar</a>
+        <a href="mailto:${c.correo}" style="display:inline-block;padding:6px 12px;background:#007bff;color:#fff;border-radius:4px;text-decoration:none;margin-left:5px;">📧 Email</a>
+        <br><br>
+        <button onclick="openDirections(${c.lat},${c.lng})" style="background:#ff9800;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">🗺 Cómo llegar</button>
+      </div>
+      `
+    });
+    marker.addListener("click",()=>info.open(map,marker));
+    markers.push(marker);
+  });
+  markerCluster=new markerClusterer.MarkerClusterer({ map, markers });
+}
+
+function renderContacts(data){
+  const groupBy=document.getElementById("groupBy").value;
+  const container=document.getElementById("list");
+  container.innerHTML="";
+  if(!groupBy){ data.forEach(c=>container.innerHTML+=contactCardHTML(c)); return; }
+  const grouped={};
+  data.forEach(c=>{
+    const key=c[groupBy];
+    if(!grouped[key]) grouped[key]=[];
+    grouped[key].push(c);
+  });
+  Object.keys(grouped).forEach(group=>{
+    container.innerHTML+=`<button class="accordion">${group} (${grouped[group].length})</button><div class="panel">${grouped[group].map(c=>contactCardHTML(c)).join("")}</div>`;
+  });
+  initAccordions();
+}
+
+function contactCardHTML(c){
+  return `<div class="contact">
+    <strong>${c.nombre}</strong><br>
+    <small>${c.cargo} - ${c.institucion}</small><br>
+    📍 ${c.sede}<br>
+    <div class="buttons">
+      <button class="btn-call" onclick="location.href='tel:${c.telefono}'">📞 Llamar</button>
+      <button class="btn-email" onclick="location.href='mailto:${c.correo}'">📧 Email</button>
+      <button class="btn-route" onclick="openDirections(${c.lat},${c.lng})">🗺 Cómo llegar</button>
+    </div>
+  </div>`;
+}
+
+function initAccordions(){
+  const acc=document.getElementsByClassName("accordion");
+  for(let i=0;i<acc.length;i++){
+    acc[i].addEventListener("click",function(){
+      this.classList.toggle("active");
+      const panel=this.nextElementSibling;
+      panel.style.display=(panel.style.display==="block")?"none":"block";
+    });
+  }
+}
+
+document.getElementById("search").addEventListener("input",filterContacts);
+document.getElementById("filterInstitucion").addEventListener("change",filterContacts);
+document.getElementById("filterArea").addEventListener("change",filterContacts);
+document.getElementById("groupBy").addEventListener("change",()=>renderContacts(getFilteredContacts()));
+document.getElementById("btnExport").addEventListener("click",()=>exportCSV(getFilteredContacts()));
+
+function getFilteredContacts(){
+  const query=document.getElementById("search").value.toLowerCase();
+  const instFilter=document.getElementById("filterInstitucion").value;
+  const areaFilter=document.getElementById("filterArea").value;
+  return contacts.filter(c=>
+    (c.nombre.toLowerCase().includes(query)||c.institucion.toLowerCase().includes(query)) &&
+    (instFilter===""||c.institucion===instFilter) &&
+    (areaFilter===""||c.area===areaFilter)
+  );
+}
+
+function filterContacts(){
+  const filtered=getFilteredContacts();
+  renderContacts(filtered);
+  updateMarkers(filtered);
+}
+
+function exportCSV(data){
+  let csv="Institución,Cargo,Nombre,Correo,Teléfono,Área,Sede,Ubicación,Latitud,Longitud\n";
+  data.forEach(c=>{
+    csv+=`${c.institucion},${c.cargo},${c.nombre},${c.correo},${c.telefono},${c.area},${c.sede},${c.ubicacion},${c.lat},${c.lng}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="directorio_filtrado.csv"; a.click();
+}
+
+// Botón hamburguesa
+document.getElementById("menu-btn").addEventListener("click",()=>{
+  document.getElementById("sidebar").classList.toggle("show");
+});
+
+// FAB para ubicación
+document.getElementById("locate-btn").addEventListener("click",()=>{
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      if(userMarker){ userMarker.setPosition(userPos); }
+      else {
+        userMarker=new google.maps.Marker({
+          position:userPos,map:map,
+          icon:{url:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"},
+          title:"Tu ubicación"
+        });
+      }
+      map.setCenter(userPos);
+      map.setZoom(12);
+    },()=>alert("No se pudo obtener tu ubicación."));
+  } else { alert("Tu navegador no soporta geolocalización."); }
+});
+
+// Abrir Google Maps con ruta
+function openDirections(destLat, destLng){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const originLat = pos.coords.latitude;
+      const originLng = pos.coords.longitude;
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}`;
+      window.open(url, "_blank");
+    }, ()=>{
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
+      window.open(url, "_blank");
+    });
+  } else {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
+    window.open(url, "_blank");
+  }
+}
+
+loadData();
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k" async defer></script>
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+</body>
+</html>
