@@ -100,6 +100,10 @@ input, select, button {
 <!-- Botón FAB -->
 <button id="locate-btn" title="Mostrar mi ubicación">📍</button>
 
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k&callback=initMap" async defer></script>
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+  
 <script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pubhtml?gid=0&single=true"; // Cambia por tu enlace CSV
 let contacts = [], map, markers = [], markerCluster, userMarker=null;
@@ -310,9 +314,9 @@ function openDirections(destLat, destLng, btn=null){
 
 loadData();
 </script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k&callback=initMap" async defer></script>
-<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+
 </body>
 </html>
+
 
 
