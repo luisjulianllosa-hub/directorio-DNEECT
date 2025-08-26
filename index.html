@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
@@ -7,17 +7,16 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <style>
   body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; }
   #sidebar { width:30%; background:#f7f7f7; padding:15px; box-sizing:border-box; overflow-y:auto; border-right:1px solid #ccc; transition:transform 0.3s ease; }
   #map { flex:1; }
   h2 { margin-top:0; }
   input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box; }
-  .accordion { background:#e9ecef; padding:10px; cursor:pointer; margin-bottom:5px; border:none; text-align:left; outline:none; font-size:16px; border-radius:4px; }
-  .panel { display:none; padding:10px; background:#fff; margin-bottom:10px; border-radius:4px; }
   .contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; cursor:pointer; }
   .contact strong { font-size:14px; }
-  .buttons button { margin-right:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
+  .buttons button { margin:5px 3px 0 0; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
   .btn-call { background:#28a745; color:#fff; }
   .btn-email { background:#007bff; color:#fff; }
   .btn-route { background:#ff9800; color:#fff; }
@@ -67,10 +66,8 @@ let contacts = [], map, markers = L.markerClusterGroup(), userMarker = null;
 
 // Inicializar mapa
 map = L.map('map').setView([-12.0464, -77.0428], 6);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> | © <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd',
-  maxZoom: 19
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 map.addLayer(markers);
 
@@ -105,8 +102,7 @@ async function loadData(){
     };
   }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
   populateFilters();
-  renderContacts(contacts);
-  updateMarkers(contacts);
+  applyFilters();
 }
 
 /* ---------------- FILTROS ---------------- */
@@ -119,13 +115,50 @@ function populateFilters(){
     .forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; areaSelect.appendChild(o); });
 }
 
+function applyFilters(){
+  const search = document.getElementById("search").value.toLowerCase();
+  const inst = document.getElementById("filterInstitucion").value;
+  const area = document.getElementById("filterArea").value;
+  const groupBy = document.getElementById("groupBy").value;
+
+  let filtered = contacts.filter(c=>
+    (!search || c.nombre.toLowerCase().includes(search) || c.institucion.toLowerCase().includes(search)) &&
+    (!inst || c.institucion === inst) &&
+    (!area || c.area === area)
+  );
+
+  if(groupBy){
+    const grouped = {};
+    filtered.forEach(c=>{
+      const key = c[groupBy] || "Otros";
+      if(!grouped[key]) grouped[key]=[];
+      grouped[key].push(c);
+    });
+    renderGroupedContacts(grouped);
+  }else{
+    renderContacts(filtered);
+  }
+  updateMarkers(filtered);
+}
+
 /* ---------------- MARKERS ---------------- */
 function updateMarkers(data){
   markers.clearLayers();
   const bounds = [];
 
   data.forEach(c=>{
-    const marker = L.marker([c.lat,c.lng]).bindPopup(contactInfoHTML(c));
+    const popup = `
+      <div>
+        <strong>${c.nombre}</strong><br>
+        ${c.cargo} - ${c.institucion}<br>
+        📍 ${c.sede}<br>
+        <div class="buttons">
+          <a href="tel:${c.telefono}"><button class="btn-call"><i class="fa fa-phone"></i> Llamar</button></a>
+          <a href="mailto:${c.correo}"><button class="btn-email"><i class="fa fa-envelope"></i> Email</button></a>
+          <a href="https://www.google.com/maps?q=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i> Ruta</button></a>
+        </div>
+      </div>`;
+    const marker = L.marker([c.lat,c.lng]).bindPopup(popup);
     marker.contactId = c.nombre;
     markers.addLayer(marker);
     bounds.push([c.lat,c.lng]);
@@ -135,16 +168,25 @@ function updateMarkers(data){
 }
 
 /* ---------------- CONTACT LIST ---------------- */
-function contactInfoHTML(c){
-  return `<div><strong>${c.nombre}</strong><br>${c.cargo} - ${c.institucion}<br>📍 ${c.sede}</div>`;
-}
 function contactCardHTML(c){
   return `<div class="contact" onclick="focusMarker('${c.nombre}')">
     <strong>${c.nombre}</strong><br><small>${c.cargo} - ${c.institucion}</small><br>📍 ${c.sede}
+    <div class="buttons">
+      <a href="tel:${c.telefono}"><button class="btn-call"><i class="fa fa-phone"></i></button></a>
+      <a href="mailto:${c.correo}"><button class="btn-email"><i class="fa fa-envelope"></i></button></a>
+      <a href="https://www.google.com/maps?q=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i></button></a>
+    </div>
   </div>`;
 }
 function renderContacts(data){
   document.getElementById("list").innerHTML = data.map(c=>contactCardHTML(c)).join("");
+}
+function renderGroupedContacts(grouped){
+  let html = "";
+  for(const g in grouped){
+    html += `<h3>${g}</h3>` + grouped[g].map(c=>contactCardHTML(c)).join("");
+  }
+  document.getElementById("list").innerHTML = html;
 }
 function focusMarker(name){
   markers.eachLayer(m=>{
@@ -167,12 +209,13 @@ document.getElementById("locate-btn").addEventListener("click",()=>{
   }
 });
 
-/* ---------------- SIDEBAR TOGGLE ---------------- */
+/* ---------------- LISTENERS ---------------- */
+["search","filterInstitucion","filterArea","groupBy"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",applyFilters);
+});
 document.getElementById("menu-btn").addEventListener("click",()=>{
   document.getElementById("sidebar").classList.toggle("show");
 });
-
-/* ---------------- EXPORT CSV ---------------- */
 document.getElementById("btnExport").addEventListener("click",()=>{
   let csv = "Nombre,Institución,Cargo,Correo,Teléfono,Área,Sede,Lat,Lng\n";
   contacts.forEach(c=>{
@@ -190,6 +233,7 @@ loadData();
 </script>
 </body>
 </html>
+
 
 
 
