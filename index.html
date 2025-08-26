@@ -127,20 +127,31 @@ function parseCSV(text){
   return rows;
 }
 
+// Normaliza encabezados del CSV (quita acentos y espacios)
+  function normalizeHeader(h) {
+    return h
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "")
+      .trim();
+  }
+  
 // Carga y parsea el CSV publicado de Google Sheets
+//const headers = rows.shift().map(h => String(h).trim().toLowerCase());
 async function loadData(){
   try {
     const res = await fetch(SHEET_URL);
     if(!res.ok) throw new Error("Respuesta del CSV no OK: " + res.status);
     const text = await res.text();
     const rows = parseCSV(text);
+    const headers = rows.shift().map(h => normalizeHeader(h));
 
     if(!rows || rows.length <= 1){
       console.warn("CSV vacío o malformado. Filas:", rows ? rows.length : 0);
       return;
     }
 
-    const headers = rows.shift().map(h => String(h).trim().toLowerCase());
+    
     contacts = rows.map(cols=>{
       const obj = {};
       headers.forEach((h,i)=> obj[h] = (cols[i]||"").trim());
@@ -399,6 +410,7 @@ loadGoogleMaps(initMap);
 
 </body>
 </html>
+
 
 
 
