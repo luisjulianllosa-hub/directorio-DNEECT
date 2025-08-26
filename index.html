@@ -22,6 +22,8 @@
   .btn-route { background:#ff9800; color:#fff; }
   #btnExport { background:#6c757d; color:#fff; }
   #menu-btn { display:none; }
+  details { margin-bottom:8px; border:1px solid #ccc; border-radius:4px; background:#fff; }
+  summary { padding:6px; cursor:pointer; font-weight:bold; background:#eee; }
   @media(max-width:1024px){
     #menu-btn { display:block; position:fixed; top:15px; left:15px; background:#007bff; color:#fff; border:none; padding:10px 15px; font-size:18px; border-radius:4px; z-index:10000; cursor:pointer; width:auto; }
     #sidebar { position:fixed; top:0; left:0; width:80%; max-width:300px; height:100%; background:#f7f7f7; box-shadow:2px 0 5px rgba(0,0,0,0.3); transform:translateX(-100%); z-index:9999; }
@@ -155,7 +157,7 @@ function updateMarkers(data){
         <div class="buttons">
           <a href="tel:${c.telefono}"><button class="btn-call"><i class="fa fa-phone"></i> Llamar</button></a>
           <a href="mailto:${c.correo}"><button class="btn-email"><i class="fa fa-envelope"></i> Email</button></a>
-          <a href="https://www.google.com/maps?q=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i> Ruta</button></a>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i> Ruta</button></a>
         </div>
       </div>`;
     const marker = L.marker([c.lat,c.lng]).bindPopup(popup);
@@ -174,7 +176,7 @@ function contactCardHTML(c){
     <div class="buttons">
       <a href="tel:${c.telefono}"><button class="btn-call"><i class="fa fa-phone"></i></button></a>
       <a href="mailto:${c.correo}"><button class="btn-email"><i class="fa fa-envelope"></i></button></a>
-      <a href="https://www.google.com/maps?q=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i></button></a>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank"><button class="btn-route"><i class="fa fa-map"></i></button></a>
     </div>
   </div>`;
 }
@@ -184,7 +186,7 @@ function renderContacts(data){
 function renderGroupedContacts(grouped){
   let html = "";
   for(const g in grouped){
-    html += `<h3>${g}</h3>` + grouped[g].map(c=>contactCardHTML(c)).join("");
+    html += `<details><summary>${g}</summary>` + grouped[g].map(c=>contactCardHTML(c)).join("") + `</details>`;
   }
   document.getElementById("list").innerHTML = html;
 }
@@ -233,6 +235,7 @@ loadData();
 </script>
 </body>
 </html>
+
 
 
 
