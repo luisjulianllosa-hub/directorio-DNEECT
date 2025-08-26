@@ -12,15 +12,14 @@ h2 { margin-top:0; }
 input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box; }
 .accordion { background:#e9ecef; padding:10px; cursor:pointer; margin-bottom:5px; border:none; text-align:left; outline:none; font-size:16px; border-radius:4px; }
 .panel { display:none; padding:10px; background:#fff; margin-bottom:10px; border-radius:4px; }
-.contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; }
+.contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; cursor:pointer; }
 .contact strong { font-size:14px; }
 .buttons button { margin-right:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
 .btn-call { background:#28a745; color:#fff; }
 .btn-email { background:#007bff; color:#fff; }
 .btn-route { background:#ff9800; color:#fff; }
 #btnExport { background:#6c757d; color:#fff; }
-
-/* Sidebar y botón hamburguesa */
+/* Sidebar móvil */
 #menu-btn { display:none; }
 @media(max-width:1024px){
   #menu-btn { display:block; position:fixed; top:15px; left:15px; background:#007bff; color:#fff; border:none; padding:10px 15px; font-size:18px; border-radius:4px; z-index:10000; cursor:pointer; width:auto; }
@@ -28,18 +27,15 @@ input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:
   #sidebar.show { transform:translateX(0); }
   #map { flex:none; width:100%; height:100vh; }
 }
-
-/* FAB botón ubicación */
-#locate-btn { position: fixed; bottom: 20px; right: 20px; width:50px; height:50px; background:#007bff; color:#fff; border:none; border-radius:50%; font-size:22px; cursor:pointer; z-index:1000; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.2); }
+/* FAB ubicación */
+#locate-btn { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #007bff; color: #fff; border: none; border-radius: 50%; font-size: 22px; cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 #locate-btn:hover { background:#0056b3; }
 </style>
 </head>
 <body>
 
-<!-- Botón hamburguesa -->
 <button id="menu-btn">☰</button>
 
-<!-- Sidebar -->
 <div id="sidebar">
   <h2>Directorio Telefónico</h2>
   <input type="text" id="search" placeholder="Buscar por nombre o institución">
@@ -54,38 +50,31 @@ input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:
   <div id="list"></div>
 </div>
 
-<!-- Mapa -->
 <div id="map"></div>
-
-<!-- FAB ubicación -->
 <button id="locate-btn" title="Mostrar mi ubicación">📍</button>
 
-<!-- MarkerClusterer -->
 <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
-
 <script>
-const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k"; // Coloca tu API real aquí
+const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k"; // reemplaza por tu API Key real
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pub?gid=0&single=true&output=csv";
 
 let contacts = [], map, markers = [], markerCluster, userMarker=null;
 
-/* Cargar Google Maps dinámicamente */
 function loadGoogleMaps(callback){
-  const script=document.createElement("script");
-  script.src=`https://maps.googleapis.com/maps/api/js?key=${API_KEY}`;
-  script.async=true; script.defer=true;
-  script.onload=callback;
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}`;
+  script.async = true;
+  script.defer = true;
+  script.onload = callback;
   document.head.appendChild(script);
 }
 
-/* Inicializar mapa */
 function initMap(){
-  map=new google.maps.Map(document.getElementById("map"),{ zoom:6, center:{lat:-12.0464,lng:-77.0428} });
-  map.addListener("click",()=>{ if(window.innerWidth<=1024) document.getElementById("sidebar").classList.remove("show"); });
+  map = new google.maps.Map(document.getElementById("map"),{ zoom:6, center:{lat:-12.0464,lng:-77.0428} });
+  map.addListener("click", ()=>{ if(window.innerWidth <= 1024) document.getElementById("sidebar").classList.remove("show"); });
   loadData();
 }
 
-/* Cargar CSV */
 async function loadData(){
   try{
     const response = await fetch(SHEET_URL);
@@ -97,22 +86,20 @@ async function loadData(){
     contacts = rows.map(r=>{
       const cols=r.split(delimiter);
       let obj={};
-      headers.forEach((h,i)=>obj[h]=(cols[i]||"").trim());
+      headers.forEach((h,i)=> obj[h]=(cols[i]||"").trim());
       return {
-        institucion: obj["institucion"]||"",
-        cargo: obj["cargo"]||"",
-        nombre: obj["nombre"]||"",
-        correo: obj["correo"]||"",
-        telefono: obj["telefono"]||"",
-        area: obj["area"]||"",
-        sede: obj["sede"]||"",
-        ubicacion: obj["ubicacion"]||"",
-        lat: parseFloat(obj["lat"])||null,
-        lng: parseFloat(obj["lng"])||null
+        institucion: obj["institucion"] || "",
+        cargo: obj["cargo"] || "",
+        nombre: obj["nombre"] || "",
+        correo: obj["correo"] || "",
+        telefono: obj["telefono"] || "",
+        area: obj["area"] || "",
+        sede: obj["sede"] || "",
+        ubicacion: obj["ubicacion"] || "",
+        lat: parseFloat(obj["lat"]) || null,
+        lng: parseFloat(obj["lng"]) || null
       };
     }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
-
-    console.log("Contactos cargados:", contacts.length);
 
     populateFilters();
     renderContacts(contacts);
@@ -120,162 +107,105 @@ async function loadData(){
   } catch(e){ console.error("Error cargando datos:", e); }
 }
 
-/* Filtros */
 function populateFilters(){
   const instSelect=document.getElementById("filterInstitucion");
   const areaSelect=document.getElementById("filterArea");
-  [...new Set(contacts.map(c=>c.institucion))].forEach(inst=>{ if(inst){ let opt=document.createElement("option"); opt.value=inst; opt.textContent=inst; instSelect.appendChild(opt); }});
-  [...new Set(contacts.map(c=>c.area))].forEach(area=>{ if(area){ let opt=document.createElement("option"); opt.value=area; opt.textContent=area; areaSelect.appendChild(opt); }});
+  [...new Set(contacts.map(c=>c.institucion))].forEach(inst=>{ if(inst){ let opt=document.createElement("option"); opt.value=inst; opt.textContent=inst; instSelect.appendChild(opt); } });
+  [...new Set(contacts.map(c=>c.area))].forEach(area=>{ if(area){ let opt=document.createElement("option"); opt.value=area; opt.textContent=area; areaSelect.appendChild(opt); } });
 }
 
-/* Actualizar marcadores */
 function updateMarkers(data){
   markers.forEach(m=>m.setMap(null));
   markers=[]; if(markerCluster) markerCluster.clearMarkers();
-  let bounds=new google.maps.LatLngBounds();
-
+  let bounds = new google.maps.LatLngBounds();
   data.forEach(c=>{
-    let marker;
-    if("google" in window && "maps" in google && "marker" in google.maps && "AdvancedMarkerElement" in google.maps.marker){
-      marker = new google.maps.marker.AdvancedMarkerElement({ position:{lat:c.lat,lng:c.lng}, title:c.nombre, map:map });
-    } else {
-      marker = new google.maps.Marker({ position:{lat:c.lat,lng:c.lng}, title:c.nombre, map:map });
-    }
-    let info=new google.maps.InfoWindow({
-      content:`<div style="font-size:14px;">
-        <strong>${c.nombre}</strong><br>${c.cargo} - ${c.institucion}<br>📍 ${c.sede}<br><br>
-        <a href="tel:${c.telefono}" style="display:inline-block;padding:6px 12px;background:#28a745;color:#fff;border-radius:4px;text-decoration:none;">📞 Llamar</a>
-        <a href="mailto:${c.correo}" style="display:inline-block;padding:6px 12px;background:#007bff;color:#fff;border-radius:4px;text-decoration:none;margin-left:5px;">📧 Email</a>
-        <br><br>
-        <button onclick="openDirections(${c.lat},${c.lng}, this)" style="background:#ff9800;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">🗺 Cómo llegar</button>
-      </div>`
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position:{lat:c.lat,lng:c.lng},
+      title:c.nombre,
+      map,
+      icon:{ path: google.maps.SymbolPath.CIRCLE, scale:8, fillColor:"#007bff", fillOpacity:0.9, strokeWeight:1, strokeColor:"#fff" }
     });
-    marker.addListener("click",()=>info.open(map,marker));
+    marker.contactId = c.nombre;
+    const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
+    marker.addListener("click", ()=>{ info.open(map, marker); marker.element.style.transform+=" translateY(-10px)"; setTimeout(()=>{ marker.element.style.transform = marker.element.style.transform.replace(" translateY(-10px)",""); },300); });
     markers.push(marker);
-    bounds.extend(marker.getPosition());
+    bounds.extend(marker.position);
   });
-
   markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
   if(!bounds.isEmpty()) map.fitBounds(bounds);
 }
 
-/* Renderizar contactos */
+function contactInfoHTML(c){ return `<div style="font-size:14px;"><strong>${c.nombre}</strong><br>${c.cargo} - ${c.institucion}<br>📍 ${c.sede}<br><br><a href="tel:${c.telefono}" style="display:inline-block;padding:6px 12px;background:#28a745;color:#fff;border-radius:4px;text-decoration:none;">📞 Llamar</a> <a href="mailto:${c.correo}" style="display:inline-block;padding:6px 12px;background:#007bff;color:#fff;border-radius:4px;text-decoration:none;margin-left:5px;">📧 Email</a><br><br><button onclick="openDirections(${c.lat},${c.lng}, this)" style="background:#ff9800;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">🗺 Cómo llegar</button></div>`; }
+
 function renderContacts(data){
   const groupBy=document.getElementById("groupBy").value;
-  const container=document.getElementById("list");
-  container.innerHTML="";
+  const container=document.getElementById("list"); container.innerHTML="";
   if(!groupBy){ data.forEach(c=>container.innerHTML+=contactCardHTML(c)); return; }
-  const grouped={};
-  data.forEach(c=>{ const key=c[groupBy]||"Sin especificar"; if(!grouped[key]) grouped[key]=[]; grouped[key].push(c); });
-  Object.keys(grouped).forEach(group=>{
-    container.innerHTML+=`<button class="accordion">${group} (${grouped[group].length})</button>
-    <div class="panel">${grouped[group].map(c=>contactCardHTML(c)).join("")}</div>`;
-  });
+  const grouped={}; data.forEach(c=>{ const key=c[groupBy]||"Sin especificar"; if(!grouped[key]) grouped[key]=[]; grouped[key].push(c); });
+  Object.keys(grouped).forEach(group=>{ container.innerHTML+=`<button class="accordion">${group} (${grouped[group].length})</button><div class="panel">${grouped[group].map(c=>contactCardHTML(c)).join("")}</div>`; });
   initAccordions();
 }
 
 function contactCardHTML(c){
-  return `<div class="contact">
-    <strong>${c.nombre}</strong><br>
-    <small>${c.cargo} - ${c.institucion}</small><br>
-    📍 ${c.sede}<br>
-    <div class="buttons">
-      <button class="btn-call" onclick="location.href='tel:${c.telefono}'">📞 Llamar</button>
-      <button class="btn-email" onclick="location.href='mailto:${c.correo}'">📧 Email</button>
-      <button class="btn-route" onclick="openDirections(${c.lat},${c.lng}, this)">🗺 Cómo llegar</button>
-    </div>
-  </div>`;
+  return `<div class="contact" onclick="focusMarker('${c.nombre.replace(/'/g,"\\'")}')"><strong>${c.nombre}</strong><br><small>${c.cargo} - ${c.institucion}</small><br>📍 ${c.sede}<div class="buttons"><button class="btn-call" onclick="event.stopPropagation(); location.href='tel:${c.telefono}'">📞 Llamar</button><button class="btn-email" onclick="event.stopPropagation(); location.href='mailto:${c.correo}'">📧 Email</button><button class="btn-route" onclick="event.stopPropagation(); openDirections(${c.lat},${c.lng}, this)">🗺 Cómo llegar</button></div></div>`;
 }
 
-function initAccordions(){
-  const acc=document.getElementsByClassName("accordion");
-  for(let i=0;i<acc.length;i++){
-    acc[i].addEventListener("click",function(){
-      this.classList.toggle("active");
-      const panel=this.nextElementSibling;
-      panel.style.display=(panel.style.display==="block")?"none":"block";
-    });
-  }
-}
+function initAccordions(){ const acc=document.getElementsByClassName("accordion"); for(let i=0;i<acc.length;i++){ acc[i].addEventListener("click",function(){ this.classList.toggle("active"); const panel=this.nextElementSibling; panel.style.display=(panel.style.display==="block")?"none":"block"; }); } }
 
-/* Filtros y eventos */
 document.getElementById("search").addEventListener("input",filterContacts);
 document.getElementById("filterInstitucion").addEventListener("change",filterContacts);
 document.getElementById("filterArea").addEventListener("change",filterContacts);
 document.getElementById("groupBy").addEventListener("change",()=>renderContacts(getFilteredContacts()));
 document.getElementById("btnExport").addEventListener("click",()=>exportCSV(getFilteredContacts()));
 
-function getFilteredContacts(){
-  const query=document.getElementById("search").value.toLowerCase();
-  const instFilter=document.getElementById("filterInstitucion").value;
-  const areaFilter=document.getElementById("filterArea").value;
-  return contacts.filter(c=>
-    (c.nombre.toLowerCase().includes(query)||c.institucion.toLowerCase().includes(query)) &&
-    (instFilter===""||c.institucion===instFilter) &&
-    (areaFilter===""||c.area===areaFilter)
-  );
-}
+function getFilteredContacts(){ const query=document.getElementById("search").value.toLowerCase(); const instFilter=document.getElementById("filterInstitucion").value; const areaFilter=document.getElementById("filterArea").value; return contacts.filter(c=>(c.nombre.toLowerCase().includes(query)||c.institucion.toLowerCase().includes(query))&&(instFilter===""||c.institucion===instFilter)&&(areaFilter===""||c.area===areaFilter)); }
+function filterContacts(){ const filtered=getFilteredContacts(); renderContacts(filtered); updateMarkers(filtered); }
+function exportCSV(data){ let csv="Institución,Cargo,Nombre,Correo,Teléfono,Área,Sede,Ubicación,Latitud,Longitud\n"; data.forEach(c=>{ csv+=`${c.institucion},${c.cargo},${c.nombre},${c.correo},${c.telefono},${c.area},${c.sede},${c.ubicacion},${c.lat},${c.lng}\n`; }); const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="directorio_filtrado.csv"; a.click(); }
 
-function filterContacts(){
-  const filtered=getFilteredContacts();
-  renderContacts(filtered);
-  updateMarkers(filtered);
-}
-
-function exportCSV(data){
-  let csv="Institución,Cargo,Nombre,Correo,Teléfono,Área,Sede,Ubicación,Latitud,Longitud\n";
-  data.forEach(c=>{
-    csv+=`${c.institucion},${c.cargo},${c.nombre},${c.correo},${c.telefono},${c.area},${c.sede},${c.ubicacion},${c.lat},${c.lng}\n`;
-  });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download="directorio_filtrado.csv";
-  a.click();
-}
-
-/* Menú hamburguesa */
 document.getElementById("menu-btn").addEventListener("click",()=>{ document.getElementById("sidebar").classList.toggle("show"); });
 
-/* FAB ubicación */
 document.getElementById("locate-btn").addEventListener("click",()=>{
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(pos=>{
       const userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      if(userMarker){ userMarker.setPosition(userPos); }
-      else{
-        userMarker=new google.maps.Marker({ position:userPos, map:map, icon:{url:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"}, title:"Tu ubicación" });
+      if(userMarker){ userMarker.setPosition(userPos); } else {
+        userMarker=new google.maps.Marker({ position:userPos,map:map,icon:{url:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"}, title:"Tu ubicación" });
       }
       map.setCenter(userPos); map.setZoom(12);
     },()=>alert("No se pudo obtener tu ubicación."));
   } else { alert("Tu navegador no soporta geolocalización."); }
 });
 
-/* Cómo llegar */
-function openDirections(destLat, destLng, btn=null){
+function openDirections(destLat,destLng,btn=null){
   if(btn){ btn.disabled=true; btn.textContent="Calculando..."; }
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(pos=>{
-      const url=`https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}&destination=${destLat},${destLng}`;
-      window.open(url,"_blank");
+      const originLat = pos.coords.latitude; const originLng = pos.coords.longitude;
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}`,"_blank");
       if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
     }, ()=>{
-      const url=`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
-      window.open(url,"_blank");
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`,"_blank");
       if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
-    },{ timeout:7000 });
-  } else {
-    const url=`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
-    window.open(url,"_blank");
-    if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
+    }, {timeout:7000});
+  } else { window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`,"_blank"); if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; } }
+}
+
+function focusMarker(contactName){
+  const marker = markers.find(m=>m.contactId===contactName);
+  if(marker){
+    map.setCenter(marker.position); map.setZoom(14);
+    const info = new google.maps.InfoWindow({ content: contactInfoHTML(contacts.find(c=>c.nombre===contactName)) });
+    info.open(map, marker);
+    marker.element.style.transform+=" translateY(-10px)";
+    setTimeout(()=>{ marker.element.style.transform = marker.element.style.transform.replace(" translateY(-10px)",""); },300);
   }
 }
 
-/* Cargar Google Maps */
 loadGoogleMaps(initMap);
 </script>
 </body>
 </html>
+
 
 
 
