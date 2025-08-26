@@ -57,16 +57,15 @@
 <script>
 // ---------------- CONFIG ----------------
 const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k";   // 👈 pon aquí tu API Key
-const MAP_ID = "769e3204db9a9e3ad1a55055";     // 👈 pon aquí tu Map ID (Javascript Vector)
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pub?gid=0&single=true&output=csv";
 // ----------------------------------------
 
 let contacts = [], map, markers = [], markerCluster = null, userMarker = null;
 
-// Cargar Google Maps con librería `marker`
+// Cargar Google Maps (sin mapId, sin AdvancedMarkerElement)
 function loadGoogleMaps(callback){
   const s = document.createElement("script");
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker&map_ids=${MAP_ID}`;
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}`;
   s.async = true; s.defer = true;
   s.onload = callback;
   s.onerror = ()=>console.error("No se pudo cargar Google Maps. Revisa tu API key / conexión.");
@@ -77,8 +76,7 @@ function loadGoogleMaps(callback){
 function initMap(){
   map = new google.maps.Map(document.getElementById("map"), {
     zoom: 6,
-    center: { lat: -12.0464, lng: -77.0428 },
-    mapId: MAP_ID
+    center: { lat: -12.0464, lng: -77.0428 }
   });
   loadData();
 }
@@ -130,26 +128,25 @@ function populateFilters(){
 
 /* ---------------- MARKERS ---------------- */
 function updateMarkers(data){
-  markers.forEach(m => { try{ m.map = null; }catch(e){} });
+  markers.forEach(m => m.setMap(null));
   markers=[];
-  if(markerCluster){ try{ markerCluster.clearMarkers(); }catch(e){} }
+  if(markerCluster){ markerCluster.clearMarkers(); }
 
   const bounds = new google.maps.LatLngBounds();
 
   data.forEach(c=>{
-    const pin = new google.maps.marker.PinElement({
-      background:"#007bff", borderColor:"#fff", glyphColor:"#fff"
-    });
-    const marker = new google.maps.marker.AdvancedMarkerElement({
-      position:{lat:c.lat,lng:c.lng}, map, title:c.nombre, content: pin.element
+    const marker = new google.maps.Marker({
+      position:{lat:c.lat,lng:c.lng}, 
+      map: map, 
+      title:c.nombre
     });
     marker.contactId = c.nombre;
     marker.addListener("click",()=>{
       const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
-      info.open({ anchor: marker, map });
+      info.open(map, marker);
     });
     markers.push(marker);
-    bounds.extend(marker.position);
+    bounds.extend(marker.getPosition());
   });
 
   markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
@@ -172,12 +169,12 @@ function renderContacts(data){
 function focusMarker(name){
   const marker = markers.find(m=>m.contactId===name);
   if(!marker) return;
-  map.setCenter(marker.position);
+  map.setCenter(marker.getPosition());
   map.setZoom(14);
   const c = contacts.find(x=>x.nombre===name);
   if(c){
     const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
-    info.open({ anchor: marker, map });
+    info.open(map, marker);
   }
 }
 
@@ -186,20 +183,4 @@ loadGoogleMaps(initMap);
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
