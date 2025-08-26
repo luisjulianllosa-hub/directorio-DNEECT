@@ -1,33 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Directorio Telefónico</title>
 <style>
-body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; }
-#sidebar { width:30%; background:#f7f7f7; padding:15px; box-sizing:border-box; overflow-y:auto; border-right:1px solid #ccc; transition:transform 0.3s ease; }
-#map { flex:1; }
-h2 { margin-top:0; }
-input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box; }
-.accordion { background:#e9ecef; padding:10px; cursor:pointer; margin-bottom:5px; border:none; text-align:left; outline:none; font-size:16px; border-radius:4px; }
-.panel { display:none; padding:10px; background:#fff; margin-bottom:10px; border-radius:4px; }
-.contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; cursor:pointer; }
-.contact strong { font-size:14px; }
-.buttons button { margin-right:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
-.btn-call { background:#28a745; color:#fff; }
-.btn-email { background:#007bff; color:#fff; }
-.btn-route { background:#ff9800; color:#fff; }
-#btnExport { background:#6c757d; color:#fff; }
-#menu-btn { display:none; }
-@media(max-width:1024px){
-  #menu-btn { display:block; position:fixed; top:15px; left:15px; background:#007bff; color:#fff; border:none; padding:10px 15px; font-size:18px; border-radius:4px; z-index:10000; cursor:pointer; width:auto; }
-  #sidebar { position:fixed; top:0; left:0; width:80%; max-width:300px; height:100%; background:#f7f7f7; box-shadow:2px 0 5px rgba(0,0,0,0.3); transform:translateX(-100%); z-index:9999; }
-  #sidebar.show { transform:translateX(0); }
-  #map { flex:none; width:100%; height:100vh; }
-}
-#locate-btn { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #007bff; color: #fff; border: none; border-radius: 50%; font-size: 22px; cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
-#locate-btn:hover { background:#0056b3; }
+  body { margin:0; font-family:Arial,sans-serif; display:flex; height:100vh; }
+  #sidebar { width:30%; background:#f7f7f7; padding:15px; box-sizing:border-box; overflow-y:auto; border-right:1px solid #ccc; transition:transform 0.3s ease; }
+  #map { flex:1; }
+  h2 { margin-top:0; }
+  input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box; }
+  .accordion { background:#e9ecef; padding:10px; cursor:pointer; margin-bottom:5px; border:none; text-align:left; outline:none; font-size:16px; border-radius:4px; }
+  .panel { display:none; padding:10px; background:#fff; margin-bottom:10px; border-radius:4px; }
+  .contact { margin-bottom:10px; padding:8px; border-bottom:1px solid #ddd; cursor:pointer; }
+  .contact strong { font-size:14px; }
+  .buttons button { margin-right:5px; padding:5px 10px; border:none; border-radius:4px; cursor:pointer; font-size:12px; }
+  .btn-call { background:#28a745; color:#fff; }
+  .btn-email { background:#007bff; color:#fff; }
+  .btn-route { background:#ff9800; color:#fff; }
+  #btnExport { background:#6c757d; color:#fff; }
+  #menu-btn { display:none; }
+  @media(max-width:1024px){
+    #menu-btn { display:block; position:fixed; top:15px; left:15px; background:#007bff; color:#fff; border:none; padding:10px 15px; font-size:18px; border-radius:4px; z-index:10000; cursor:pointer; width:auto; }
+    #sidebar { position:fixed; top:0; left:0; width:80%; max-width:300px; height:100%; background:#f7f7f7; box-shadow:2px 0 5px rgba(0,0,0,0.3); transform:translateX(-100%); z-index:9999; }
+    #sidebar.show { transform:translateX(0); }
+    #map { flex:none; width:100%; height:100vh; }
+  }
+  #locate-btn { position: fixed; bottom:20px; right:20px; width:50px; height:50px; background:#007bff; color:#fff; border:none; border-radius:50%; font-size:22px; cursor:pointer; z-index:1000; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.2); }
+  #locate-btn:hover{ background:#0056b3; }
 </style>
 </head>
 <body>
@@ -51,50 +51,97 @@ input, select, button { width:100%; padding:8px; margin-bottom:10px; box-sizing:
 <div id="map"></div>
 <button id="locate-btn" title="Mostrar mi ubicación">📍</button>
 
-<!-- MarkerClusterer (última versión) -->
-<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+<!-- MarkerClusterer (ruta UMD correcta) -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.umd.js"></script>
 
 <script>
-// --------- CONFIG ----------
-const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k"; // <- reemplaza por tu API KEY si quieres probar en producción
+// ---------------- CONFIG ----------------
+const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k"; // reemplaza si lo deseas
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pub?gid=0&single=true&output=csv";
-// ---------------------------
+// ----------------------------------------
 
 let contacts = [], map, markers = [], markerCluster = null, userMarker = null;
 
-// Cargar Google Maps con la librería `marker` (necesaria para AdvancedMarkerElement / PinElement)
+// Cargar Google Maps con librería `marker` (necesaria para AdvancedMarkerElement/PinElement)
 function loadGoogleMaps(callback){
   const s = document.createElement("script");
   s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker`;
-  s.async = true;
-  s.defer = true;
+  s.async = true; s.defer = true;
   s.onload = callback;
+  s.onerror = ()=>console.error("No se pudo cargar la librería de Google Maps. Revisa tu API key / conexión.");
   document.head.appendChild(s);
 }
 
-// Inicializa el mapa y carga datos
+// Inicializar mapa
 function initMap(){
   map = new google.maps.Map(document.getElementById("map"), {
     zoom: 6,
     center: { lat: -12.0464, lng: -77.0428 }
   });
-  // cerrar sidebar en móviles al click en mapa
   map.addListener("click", ()=>{ if(window.innerWidth <= 1024) document.getElementById("sidebar").classList.remove("show"); });
   loadData();
 }
 
-// Carga CSV desde Google Sheets (simple parse - evita comillas complejas)
+/* ---------------- CSV PARSER ROBUSTO ----------------
+   - Detecta delimiter por la cabecera (',' o ';')
+   - Soporta campos entrecomillados y comillas escapadas ("")
+*/
+function parseCSV(text){
+  const firstLine = text.split(/\r?\n/)[0] || "";
+  const commaCount = (firstLine.match(/,/g)||[]).length;
+  const semicolonCount = (firstLine.match(/;/g)||[]).length;
+  const delimiter = (semicolonCount > commaCount) ? ";" : ",";
+
+  const lines = text.split(/\r?\n/);
+  const rows = [];
+
+  for(const line of lines){
+    // parse line character-by-character to handle quotes
+    const row = [];
+    let cur = "";
+    let inQuotes = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"'){
+        if(inQuotes && line[i+1] === '"'){ // escaped quote ""
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if(ch === delimiter && !inQuotes){
+        row.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    // push last field (even if empty)
+    row.push(cur);
+
+    // skip empty final lines
+    if(row.length === 1 && row[0] === "") continue;
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+// Carga y parsea el CSV publicado de Google Sheets
 async function loadData(){
   try {
-    const r = await fetch(SHEET_URL);
-    const text = await r.text();
-    const delimiter = text.includes(";") ? ";" : ",";
-    const rows = text.trim().split("\n");
-    if(rows.length <= 1){ console.warn("CSV vacío o malformado"); return; }
-    const headers = rows.shift().split(delimiter).map(h=>h.trim().toLowerCase());
+    const res = await fetch(SHEET_URL);
+    if(!res.ok) throw new Error("Respuesta del CSV no OK: " + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
 
-    contacts = rows.map(row=>{
-      const cols = row.split(delimiter);
+    if(!rows || rows.length <= 1){
+      console.warn("CSV vacío o malformado. Filas:", rows ? rows.length : 0);
+      return;
+    }
+
+    const headers = rows.shift().map(h => String(h).trim().toLowerCase());
+    contacts = rows.map(cols=>{
       const obj = {};
       headers.forEach((h,i)=> obj[h] = (cols[i]||"").trim());
       return {
@@ -112,7 +159,6 @@ async function loadData(){
     }).filter(c => !isNaN(c.lat) && !isNaN(c.lng));
 
     console.log("Contactos cargados:", contacts.length);
-
     populateFilters();
     renderContacts(contacts);
     updateMarkers(contacts);
@@ -121,7 +167,7 @@ async function loadData(){
   }
 }
 
-// Rellena selects de filtro
+/* ---------------- FILTROS ---------------- */
 function populateFilters(){
   const instSelect = document.getElementById("filterInstitucion");
   const areaSelect = document.getElementById("filterArea");
@@ -131,22 +177,23 @@ function populateFilters(){
   areas.forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; areaSelect.appendChild(o); });
 }
 
-// Actualiza marcadores: AdvancedMarkerElement + PinElement y clustering
+/* ---------------- MARKERS (AdvancedMarkerElement + PinElement) ---------------- */
 function updateMarkers(data){
-  // Eliminar marcadores previos del mapa
+  // eliminar marcadores previos
   markers.forEach(m => {
-    try{ m.map = null; } catch(e){ /* ignore */ }
+    try { m.map = null; } catch(e){ /* ignore */ }
   });
   markers = [];
-  if(markerCluster && typeof markerCluster.clearMarkers === "function"){
-    markerCluster.clearMarkers();
-  }
-  let bounds = new google.maps.LatLngBounds();
 
-  // crear marcadores AdvancedMarkerElement
+  if(markerCluster && typeof markerCluster.clearMarkers === "function"){
+    try { markerCluster.clearMarkers(); } catch(e){ /* ignore */ }
+  }
+
+  const bounds = new google.maps.LatLngBounds();
+
   data.forEach(c=>{
-    try{
-      // crear PinElement para estilo del pin
+    try {
+      // crear pin visual (PinElement provisto por la librería 'marker')
       const pin = new google.maps.marker.PinElement({
         background: "#007bff",
         borderColor: "#fff",
@@ -160,28 +207,30 @@ function updateMarkers(data){
         content: pin.element
       });
 
-      marker.contactId = c.nombre;
+      marker.contactId = c.nombre; // id para búsqueda desde la lista
 
-      // InfoWindow: usar open({ anchor, map }) para compatibilidad
       const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
+      // abrir info anclado al marker (compatible con AdvancedMarkerElement)
       marker.addListener("click", ()=> info.open({ anchor: marker, map }));
 
       markers.push(marker);
-
-      // bounds: AdvancedMarkerElement tiene propiedad position (LatLngLiteral)
       if(marker.position) bounds.extend(marker.position);
     } catch(e){
       console.warn("No se pudo crear AdvancedMarkerElement para:", c.nombre, e);
     }
   });
 
-  // Crear clusterer (acepta AdvancedMarkerElement en la versión actual)
-  markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+  // crear clusterer (la UMD expone objeto `markerClusterer`)
+  try {
+    markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+  } catch(e) {
+    console.warn("Error creando MarkerClusterer:", e);
+  }
 
   if(!bounds.isEmpty()) map.fitBounds(bounds);
 }
 
-// HTML para InfoWindow
+/* ---------------- UI / Lista / Agrupador ---------------- */
 function contactInfoHTML(c){
   return `<div style="font-size:14px;">
     <strong>${c.nombre}</strong><br>
@@ -194,7 +243,6 @@ function contactInfoHTML(c){
   </div>`;
 }
 
-// Render lista de contactos (con agrupador)
 function renderContacts(data){
   const groupBy = document.getElementById("groupBy").value;
   const container = document.getElementById("list");
@@ -215,9 +263,10 @@ function renderContacts(data){
   initAccordions();
 }
 
-// tarjeta contacto HTML
 function contactCardHTML(c){
-  return `<div class="contact" onclick="focusMarker('${c.nombre.replace(/'/g,"\\'")}')">
+  // escapar comillas simples en el onclick
+  const safeName = c.nombre.replace(/'/g,"\\'");
+  return `<div class="contact" onclick="focusMarker('${safeName}')">
     <strong>${c.nombre}</strong><br>
     <small>${c.cargo} - ${c.institucion}</small><br>
     📍 ${c.sede}
@@ -240,7 +289,7 @@ function initAccordions(){
   }
 }
 
-// FILTROS y búsqueda
+/* ---------------- BÚSQUEDA / FILTROS ---------------- */
 document.getElementById("search").addEventListener("input", filterContacts);
 document.getElementById("filterInstitucion").addEventListener("change", filterContacts);
 document.getElementById("filterArea").addEventListener("change", filterContacts);
@@ -248,7 +297,7 @@ document.getElementById("groupBy").addEventListener("change", ()=> renderContact
 document.getElementById("btnExport").addEventListener("click", ()=> exportCSV(getFilteredContacts()));
 
 function getFilteredContacts(){
-  const q = document.getElementById("search").value.toLowerCase();
+  const q = (document.getElementById("search").value || "").toLowerCase();
   const instFilter = document.getElementById("filterInstitucion").value;
   const areaFilter = document.getElementById("filterArea").value;
   return contacts.filter(c =>
@@ -264,11 +313,13 @@ function filterContacts(){
   updateMarkers(filtered);
 }
 
-// Export CSV
+/* ---------------- EXPORT ---------------- */
 function exportCSV(data){
   let csv = "Institución,Cargo,Nombre,Correo,Teléfono,Área,Sede,Ubicación,Latitud,Longitud\n";
   data.forEach(c=>{
-    csv += `${c.institucion},${c.cargo},${c.nombre},${c.correo},${c.telefono},${c.area},${c.sede},${c.ubicacion},${c.lat},${c.lng}\n`;
+    // escapa comillas dobles si hay
+    const q = (s) => `"${String(s||"").replace(/"/g, '""')}"`;
+    csv += `${q(c.institucion)},${q(c.cargo)},${q(c.nombre)},${q(c.correo)},${q(c.telefono)},${q(c.area)},${q(c.sede)},${q(c.ubicacion)},${c.lat},${c.lng}\n`;
   });
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -276,34 +327,31 @@ function exportCSV(data){
   a.href = url; a.download = "directorio_filtrado.csv"; a.click();
 }
 
-// Botón hamburguesa
+/* ---------------- UI helpers ---------------- */
 document.getElementById("menu-btn").addEventListener("click", ()=> document.getElementById("sidebar").classList.toggle("show"));
 
-// BOTÓN UBICACIÓN (usa AdvancedMarkerElement para userMarker)
 document.getElementById("locate-btn").addEventListener("click", ()=>{
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      const userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      if(userMarker){
-        try{ userMarker.map = null; } catch(e){}
-      }
-      // crear pin azul
-      const pin = new google.maps.marker.PinElement({ background: "#0000ff", borderColor: "#fff", glyphColor: "#fff" });
-      userMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: userPos,
-        map,
-        title: "Tu ubicación",
-        content: pin.element
-      });
-      map.setCenter(userPos);
-      map.setZoom(12);
-    }, ()=> alert("No se pudo obtener tu ubicación."));
-  } else alert("Tu navegador no soporta geolocalización.");
+  if(!navigator.geolocation){ alert("Tu navegador no soporta geolocalización."); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    // quitar userMarker anterior si existe
+    try{ if(userMarker) userMarker.map = null; } catch(e){}
+    // pin azul para usuario
+    const pin = new google.maps.marker.PinElement({ background: "#0000ff", borderColor: "#fff", glyphColor: "#fff" });
+    userMarker = new google.maps.marker.AdvancedMarkerElement({
+      position: userPos,
+      map,
+      title: "Tu ubicación",
+      content: pin.element
+    });
+    map.setCenter(userPos);
+    map.setZoom(12);
+  }, ()=> alert("No se pudo obtener tu ubicación."));
 });
 
-// Cómo llegar
+// abrir direcciones
 function openDirections(destLat, destLng, btn=null){
-  if(btn){ btn.disabled=true; btn.textContent="Calculando..."; }
+  if(btn){ btn.disabled = true; btn.textContent = "Calculando..."; }
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(pos=>{
       const originLat = pos.coords.latitude, originLng = pos.coords.longitude;
@@ -319,22 +367,22 @@ function openDirections(destLat, destLng, btn=null){
   }
 }
 
-// Al hacer click en la lista -> centrar, abrir InfoWindow y efecto "rebote"
+// centrar y abrir InfoWindow desde la lista (rebote visual)
 function focusMarker(contactName){
-  const marker = markers.find(m=>m.contactId === contactName);
+  const marker = markers.find(m => m.contactId === contactName);
   if(!marker) return;
-  // centrar y zoom
-  map.setCenter(marker.position);
+  // centrar + zoom
+  if(marker.position) map.setCenter(marker.position);
   map.setZoom(14);
 
-  // abrir InfoWindow (si existe contacto)
-  const c = contacts.find(x=>x.nombre === contactName);
+  // abrir InfoWindow
+  const c = contacts.find(x => x.nombre === contactName);
   if(c){
     const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
     info.open({ anchor: marker, map });
   }
 
-  // efecto rebote visual (si el marker tiene elemento DOM)
+  // efecto visual en el elemento del marker (si existe)
   try{
     const el = marker.element || marker.content || (marker.getElement && marker.getElement());
     if(el && el.style){
@@ -345,12 +393,14 @@ function focusMarker(contactName){
   }catch(e){ /* no crítico */ }
 }
 
-// Cargar Maps y arrancar
+/* ---------------- Arranque ---------------- */
 loadGoogleMaps(initMap);
 </script>
 
 </body>
 </html>
+
+
 
 
 
