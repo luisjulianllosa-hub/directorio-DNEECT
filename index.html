@@ -51,24 +51,25 @@
 <div id="map"></div>
 <button id="locate-btn" title="Mostrar mi ubicación">📍</button>
 
-<!-- MarkerClusterer (ruta UMD correcta) -->
+<!-- MarkerClusterer (UMD) -->
 <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.umd.js"></script>
 
 <script>
 // ---------------- CONFIG ----------------
-const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k"; // reemplaza si lo deseas
+const API_KEY = "AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k";   // 👈 pon aquí tu API Key
+const MAP_ID = "769e3204db9a9e3ad1a55055";     // 👈 pon aquí tu Map ID (Javascript Vector)
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJsV9WV-Kmf_bqaFnI2vTaulIyLlA2BsDi5aY-ATzs47PU6FAtcoMJQaIaOSh35wC-M9/pub?gid=0&single=true&output=csv";
 // ----------------------------------------
 
 let contacts = [], map, markers = [], markerCluster = null, userMarker = null;
 
-// Cargar Google Maps con librería `marker` (necesaria para AdvancedMarkerElement/PinElement)
+// Cargar Google Maps con librería `marker`
 function loadGoogleMaps(callback){
   const s = document.createElement("script");
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker`;
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker&map_ids=${MAP_ID}`;
   s.async = true; s.defer = true;
   s.onload = callback;
-  s.onerror = ()=>console.error("No se pudo cargar la librería de Google Maps. Revisa tu API key / conexión.");
+  s.onerror = ()=>console.error("No se pudo cargar Google Maps. Revisa tu API key / conexión.");
   document.head.appendChild(s);
 }
 
@@ -76,341 +77,116 @@ function loadGoogleMaps(callback){
 function initMap(){
   map = new google.maps.Map(document.getElementById("map"), {
     zoom: 6,
-    center: { lat: -12.0464, lng: -77.0428 }
+    center: { lat: -12.0464, lng: -77.0428 },
+    mapId: MAP_ID
   });
-  map.addListener("click", ()=>{ if(window.innerWidth <= 1024) document.getElementById("sidebar").classList.remove("show"); });
   loadData();
 }
 
-/* ---------------- CSV PARSER ROBUSTO ----------------
-   - Detecta delimiter por la cabecera (',' o ';')
-   - Soporta campos entrecomillados y comillas escapadas ("")
-*/
+/* ---------------- CSV ---------------- */
 function parseCSV(text){
-  const firstLine = text.split(/\r?\n/)[0] || "";
-  const commaCount = (firstLine.match(/,/g)||[]).length;
-  const semicolonCount = (firstLine.match(/;/g)||[]).length;
-  const delimiter = (semicolonCount > commaCount) ? ";" : ",";
-
-  const lines = text.split(/\r?\n/);
-  const rows = [];
-
-  for(const line of lines){
-    // parse line character-by-character to handle quotes
-    const row = [];
-    let cur = "";
-    let inQuotes = false;
-    for(let i=0;i<line.length;i++){
-      const ch = line[i];
-      if(ch === '"'){
-        if(inQuotes && line[i+1] === '"'){ // escaped quote ""
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if(ch === delimiter && !inQuotes){
-        row.push(cur);
-        cur = "";
-      } else {
-        cur += ch;
-      }
-    }
-    // push last field (even if empty)
-    row.push(cur);
-
-    // skip empty final lines
-    if(row.length === 1 && row[0] === "") continue;
-    rows.push(row);
-  }
-
-  return rows;
+  const delimiter = text.includes(";") ? ";" : ",";
+  return text.split(/\r?\n/).map(l => l.split(delimiter));
+}
+function normalizeHeader(h) {
+  return h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g,"").trim();
 }
 
-// Normaliza encabezados del CSV (quita acentos y espacios)
-  function normalizeHeader(h) {
-    return h
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, "")
-      .trim();
-  }
-  
-// Carga y parsea el CSV publicado de Google Sheets
-//const headers = rows.shift().map(h => String(h).trim().toLowerCase());
+// Cargar datos de Google Sheets
 async function loadData(){
-  try {
-    const res = await fetch(SHEET_URL);
-    if(!res.ok) throw new Error("Respuesta del CSV no OK: " + res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    const headers = rows.shift().map(h => normalizeHeader(h));
-
-    if(!rows || rows.length <= 1){
-      console.warn("CSV vacío o malformado. Filas:", rows ? rows.length : 0);
-      return;
-    }
-
-    
-    contacts = rows.map(cols=>{
-      const obj = {};
-      headers.forEach((h,i)=> obj[h] = (cols[i]||"").trim());
-      return {
-        institucion: obj["institucion"] || "",
-        cargo: obj["cargo"] || "",
-        nombre: obj["nombre"] || "",
-        correo: obj["correo"] || "",
-        telefono: obj["telefono"] || "",
-        area: obj["area"] || "",
-        sede: obj["sede"] || "",
-        ubicacion: obj["ubicacion"] || "",
-        // Aquí el arreglo para latitud/longitud correcto
-        lat: parseFloat(obj["lat"] || obj["latitud"]),
-        lng: parseFloat(obj["lng"] || obj["longitud"])
-      };
-    }).filter(c => !isNaN(c.lat) && !isNaN(c.lng));
-
-    console.log("Contactos cargados:", contacts.length);
-    populateFilters();
-    renderContacts(contacts);
-    updateMarkers(contacts);
-  } catch(err){
-    console.error("Error cargando datos:", err);
-  }
+  const res = await fetch(SHEET_URL);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  const headers = rows.shift().map(h => normalizeHeader(h));
+  contacts = rows.map(cols=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = (cols[i]||"").trim());
+    return {
+      institucion: obj["institucion"] || "",
+      cargo: obj["cargo"] || "",
+      nombre: obj["nombre"] || "",
+      correo: obj["correo"] || "",
+      telefono: obj["telefono"] || "",
+      area: obj["area"] || "",
+      sede: obj["sede"] || "",
+      lat: parseFloat(obj["lat"] || obj["latitud"]),
+      lng: parseFloat(obj["lng"] || obj["longitud"])
+    };
+  }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
+  populateFilters();
+  renderContacts(contacts);
+  updateMarkers(contacts);
 }
 
 /* ---------------- FILTROS ---------------- */
 function populateFilters(){
   const instSelect = document.getElementById("filterInstitucion");
   const areaSelect = document.getElementById("filterArea");
-  const insts = [...new Set(contacts.map(c=>c.institucion))].filter(Boolean).sort();
-  const areas = [...new Set(contacts.map(c=>c.area))].filter(Boolean).sort();
-  insts.forEach(i=>{ const o=document.createElement("option"); o.value=i; o.textContent=i; instSelect.appendChild(o); });
-  areas.forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; areaSelect.appendChild(o); });
+  [...new Set(contacts.map(c=>c.institucion))].filter(Boolean).sort()
+    .forEach(i=>{ const o=document.createElement("option"); o.value=i; o.textContent=i; instSelect.appendChild(o); });
+  [...new Set(contacts.map(c=>c.area))].filter(Boolean).sort()
+    .forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; areaSelect.appendChild(o); });
 }
 
-/* ---------------- MARKERS (AdvancedMarkerElement + PinElement) ---------------- */
+/* ---------------- MARKERS ---------------- */
 function updateMarkers(data){
-  // eliminar marcadores previos
-  markers.forEach(m => {
-    try { m.map = null; } catch(e){ /* ignore */ }
-  });
-  markers = [];
-
-  if(markerCluster && typeof markerCluster.clearMarkers === "function"){
-    try { markerCluster.clearMarkers(); } catch(e){ /* ignore */ }
-  }
+  markers.forEach(m => { try{ m.map = null; }catch(e){} });
+  markers=[];
+  if(markerCluster){ try{ markerCluster.clearMarkers(); }catch(e){} }
 
   const bounds = new google.maps.LatLngBounds();
 
   data.forEach(c=>{
-    try {
-      // crear pin visual (PinElement provisto por la librería 'marker')
-      const pin = new google.maps.marker.PinElement({
-        background: "#007bff",
-        borderColor: "#fff",
-        glyphColor: "#fff"
-      });
-
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        position: { lat: c.lat, lng: c.lng },
-        title: c.nombre,
-        map: map,
-        content: pin.element
-      });
-
-      marker.contactId = c.nombre; // id para búsqueda desde la lista
-
+    const pin = new google.maps.marker.PinElement({
+      background:"#007bff", borderColor:"#fff", glyphColor:"#fff"
+    });
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position:{lat:c.lat,lng:c.lng}, map, title:c.nombre, content: pin.element
+    });
+    marker.contactId = c.nombre;
+    marker.addListener("click",()=>{
       const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
-      // abrir info anclado al marker (compatible con AdvancedMarkerElement)
-      marker.addListener("click", ()=> info.open({ anchor: marker, map }));
-
-      markers.push(marker);
-      if(marker.position) bounds.extend(marker.position);
-    } catch(e){
-      console.warn("No se pudo crear AdvancedMarkerElement para:", c.nombre, e);
-    }
+      info.open({ anchor: marker, map });
+    });
+    markers.push(marker);
+    bounds.extend(marker.position);
   });
 
-  // crear clusterer (la UMD expone objeto `markerClusterer`)
-  try {
-    markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
-  } catch(e) {
-    console.warn("Error creando MarkerClusterer:", e);
-  }
-
+  markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
   if(!bounds.isEmpty()) map.fitBounds(bounds);
 }
 
-/* ---------------- UI / Lista / Agrupador ---------------- */
+/* ---------------- CONTACT LIST ---------------- */
 function contactInfoHTML(c){
-  return `<div style="font-size:14px;">
-    <strong>${c.nombre}</strong><br>
-    ${c.cargo} - ${c.institucion}<br>
-    📍 ${c.sede}<br><br>
-    <a href="tel:${c.telefono}" style="display:inline-block;padding:6px 12px;background:#28a745;color:#fff;border-radius:4px;text-decoration:none;">📞 Llamar</a>
-    <a href="mailto:${c.correo}" style="display:inline-block;padding:6px 12px;background:#007bff;color:#fff;border-radius:4px;text-decoration:none;margin-left:5px;">📧 Email</a>
-    <br><br>
-    <button onclick="openDirections(${c.lat},${c.lng}, this)" style="background:#ff9800;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;">🗺 Cómo llegar</button>
-  </div>`;
+  return `<div><strong>${c.nombre}</strong><br>${c.cargo} - ${c.institucion}<br>📍 ${c.sede}</div>`;
 }
-
-function renderContacts(data){
-  const groupBy = document.getElementById("groupBy").value;
-  const container = document.getElementById("list");
-  container.innerHTML = "";
-  if(!groupBy){
-    data.forEach(c => container.innerHTML += contactCardHTML(c));
-    return;
-  }
-  const grouped = {};
-  data.forEach(c => {
-    const key = c[groupBy] || "Sin especificar";
-    if(!grouped[key]) grouped[key] = [];
-    grouped[key].push(c);
-  });
-  Object.keys(grouped).forEach(group => {
-    container.innerHTML += `<button class="accordion">${group} (${grouped[group].length})</button><div class="panel">${grouped[group].map(c=>contactCardHTML(c)).join("")}</div>`;
-  });
-  initAccordions();
-}
-
 function contactCardHTML(c){
-  // escapar comillas simples en el onclick
   const safeName = c.nombre.replace(/'/g,"\\'");
   return `<div class="contact" onclick="focusMarker('${safeName}')">
-    <strong>${c.nombre}</strong><br>
-    <small>${c.cargo} - ${c.institucion}</small><br>
-    📍 ${c.sede}
-    <div class="buttons">
-      <button class="btn-call" onclick="event.stopPropagation(); location.href='tel:${c.telefono}'">📞 Llamar</button>
-      <button class="btn-email" onclick="event.stopPropagation(); location.href='mailto:${c.correo}'">📧 Email</button>
-      <button class="btn-route" onclick="event.stopPropagation(); openDirections(${c.lat},${c.lng}, this)">🗺 Cómo llegar</button>
-    </div>
+    <strong>${c.nombre}</strong><br><small>${c.cargo} - ${c.institucion}</small><br>📍 ${c.sede}
   </div>`;
 }
-
-function initAccordions(){
-  const acc = document.getElementsByClassName("accordion");
-  for(let i=0;i<acc.length;i++){
-    acc[i].addEventListener("click", function(){
-      this.classList.toggle("active");
-      const panel = this.nextElementSibling;
-      panel.style.display = (panel.style.display === "block") ? "none" : "block";
-    });
-  }
+function renderContacts(data){
+  document.getElementById("list").innerHTML = data.map(c=>contactCardHTML(c)).join("");
 }
-
-/* ---------------- BÚSQUEDA / FILTROS ---------------- */
-document.getElementById("search").addEventListener("input", filterContacts);
-document.getElementById("filterInstitucion").addEventListener("change", filterContacts);
-document.getElementById("filterArea").addEventListener("change", filterContacts);
-document.getElementById("groupBy").addEventListener("change", ()=> renderContacts(getFilteredContacts()));
-document.getElementById("btnExport").addEventListener("click", ()=> exportCSV(getFilteredContacts()));
-
-function getFilteredContacts(){
-  const q = (document.getElementById("search").value || "").toLowerCase();
-  const instFilter = document.getElementById("filterInstitucion").value;
-  const areaFilter = document.getElementById("filterArea").value;
-  return contacts.filter(c =>
-    (c.nombre.toLowerCase().includes(q) || c.institucion.toLowerCase().includes(q)) &&
-    (instFilter === "" || c.institucion === instFilter) &&
-    (areaFilter === "" || c.area === areaFilter)
-  );
-}
-
-function filterContacts(){
-  const filtered = getFilteredContacts();
-  renderContacts(filtered);
-  updateMarkers(filtered);
-}
-
-/* ---------------- EXPORT ---------------- */
-function exportCSV(data){
-  let csv = "Institución,Cargo,Nombre,Correo,Teléfono,Área,Sede,Ubicación,Latitud,Longitud\n";
-  data.forEach(c=>{
-    // escapa comillas dobles si hay
-    const q = (s) => `"${String(s||"").replace(/"/g, '""')}"`;
-    csv += `${q(c.institucion)},${q(c.cargo)},${q(c.nombre)},${q(c.correo)},${q(c.telefono)},${q(c.area)},${q(c.sede)},${q(c.ubicacion)},${c.lat},${c.lng}\n`;
-  });
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "directorio_filtrado.csv"; a.click();
-}
-
-/* ---------------- UI helpers ---------------- */
-document.getElementById("menu-btn").addEventListener("click", ()=> document.getElementById("sidebar").classList.toggle("show"));
-
-document.getElementById("locate-btn").addEventListener("click", ()=>{
-  if(!navigator.geolocation){ alert("Tu navegador no soporta geolocalización."); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    // quitar userMarker anterior si existe
-    try{ if(userMarker) userMarker.map = null; } catch(e){}
-    // pin azul para usuario
-    const pin = new google.maps.marker.PinElement({ background: "#0000ff", borderColor: "#fff", glyphColor: "#fff" });
-    userMarker = new google.maps.marker.AdvancedMarkerElement({
-      position: userPos,
-      map,
-      title: "Tu ubicación",
-      content: pin.element
-    });
-    map.setCenter(userPos);
-    map.setZoom(12);
-  }, ()=> alert("No se pudo obtener tu ubicación."));
-});
-
-// abrir direcciones
-function openDirections(destLat, destLng, btn=null){
-  if(btn){ btn.disabled = true; btn.textContent = "Calculando..."; }
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      const originLat = pos.coords.latitude, originLng = pos.coords.longitude;
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}`,"_blank");
-      if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
-    }, ()=>{
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`,"_blank");
-      if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
-    }, { timeout:7000 });
-  } else {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`,"_blank");
-    if(btn){ btn.disabled=false; btn.textContent="🗺 Cómo llegar"; }
-  }
-}
-
-// centrar y abrir InfoWindow desde la lista (rebote visual)
-function focusMarker(contactName){
-  const marker = markers.find(m => m.contactId === contactName);
+function focusMarker(name){
+  const marker = markers.find(m=>m.contactId===name);
   if(!marker) return;
-  // centrar + zoom
-  if(marker.position) map.setCenter(marker.position);
+  map.setCenter(marker.position);
   map.setZoom(14);
-
-  // abrir InfoWindow
-  const c = contacts.find(x => x.nombre === contactName);
+  const c = contacts.find(x=>x.nombre===name);
   if(c){
     const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
     info.open({ anchor: marker, map });
   }
-
-  // efecto visual en el elemento del marker (si existe)
-  try{
-    const el = marker.element || marker.content || (marker.getElement && marker.getElement());
-    if(el && el.style){
-      el.style.transition = "transform 0.25s";
-      el.style.transform = "translateY(-8px) scale(1.05)";
-      setTimeout(()=> { el.style.transform = ""; }, 600);
-    }
-  }catch(e){ /* no crítico */ }
 }
 
-/* ---------------- Arranque ---------------- */
+/* ---------------- ARRANQUE ---------------- */
 loadGoogleMaps(initMap);
 </script>
-
 </body>
 </html>
+
 
 
 
