@@ -59,6 +59,15 @@ const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRTHzFhXhtdNJ
 
 let contacts=[], map, markers=[], markerCluster, userMarker=null;
 
+function loadGoogleMaps(callback){
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}`;
+  script.async = true;
+  script.defer = true;
+  script.onload = callback;
+  document.head.appendChild(script);
+}
+
 function initMap(){
   map = new google.maps.Map(document.getElementById("map"), { zoom:6, center:{lat:-12.0464,lng:-77.0428} });
   map.addListener("click", ()=>{ if(window.innerWidth<=1024) document.getElementById("sidebar").classList.remove("show"); });
@@ -86,10 +95,10 @@ async function loadData(){
         area: obj["area"] || "",
         sede: obj["sede"] || "",
         ubicacion: obj["ubicacion"] || "",
-        lat: parseFloat(obj["lat"]) || null,
-        lng: parseFloat(obj["lng"]) || null
+        lat: parseFloat(obj["lat"]),
+        lng: parseFloat(obj["lng"])
       };
-    }).filter(c=>!isNaN(c.lat)&&!isNaN(c.lng));
+    }).filter(c=>!isNaN(c.lat) && !isNaN(c.lng));
 
     populateFilters();
     renderContacts(contacts);
@@ -105,16 +114,17 @@ function populateFilters(){
 }
 
 function updateMarkers(data){
-  markers.forEach(m=>m.setMap(null));
+  markers.forEach(m=>m.map=null);
   markers=[];
   if(markerCluster) markerCluster.clearMarkers();
   let bounds = new google.maps.LatLngBounds();
+
   data.forEach(c=>{
-    const marker = new google.maps.Marker({
-      position: {lat:c.lat, lng:c.lng},
-      map: map,
-      title: c.nombre,
-      icon:{ path: google.maps.SymbolPath.CIRCLE, scale:8, fillColor:"#007bff", fillOpacity:0.9, strokeWeight:1, strokeColor:"#fff" }
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position:{lat:c.lat,lng:c.lng},
+      map:map,
+      title:c.nombre,
+      content:`<div style="width:14px;height:14px;background:#007bff;border-radius:50%;border:2px solid #fff;"></div>`
     });
     marker.contactId = c.nombre;
     const info = new google.maps.InfoWindow({ content: contactInfoHTML(c) });
@@ -122,6 +132,7 @@ function updateMarkers(data){
     markers.push(marker);
     bounds.extend(marker.position);
   });
+
   markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
   if(!bounds.isEmpty()) map.fitBounds(bounds);
 }
@@ -164,7 +175,7 @@ document.getElementById("locate-btn").addEventListener("click",()=>{
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(pos=>{
       const userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      if(userMarker){ userMarker.setPosition(userPos); } else { userMarker=new google.maps.Marker({ position:userPos,map:map,icon:{url:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"}, title:"Tu ubicación" }); }
+      if(userMarker){ userMarker.position=userPos; } else { userMarker=new google.maps.Marker({ position:userPos,map:map,icon:{url:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png"}, title:"Tu ubicación" }); }
       map.setCenter(userPos); map.setZoom(12);
     },()=>alert("No se pudo obtener tu ubicación."));
   } else { alert("Tu navegador no soporta geolocalización."); }
@@ -189,12 +200,14 @@ function focusMarker(contactName){
     info.open(map, marker);
   }
 }
-</script>
 
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDCKEw0krkL1pGWCxPji_SYqyznd7-lQ_k&callback=initMap"></script>
+loadGoogleMaps(initMap);
+</script>
 
 </body>
 </html>
+
+
 
 
 
