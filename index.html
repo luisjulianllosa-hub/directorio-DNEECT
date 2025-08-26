@@ -164,8 +164,9 @@ async function loadData(){
         area: obj["area"] || "",
         sede: obj["sede"] || "",
         ubicacion: obj["ubicacion"] || "",
-        lat: parseFloat(obj["lat"]),
-        lng: parseFloat(obj["lng"])
+        // Aquí el arreglo para latitud/longitud correcto
+        lat: parseFloat(obj["lat"] || obj["latitud"]),
+        lng: parseFloat(obj["lng"] || obj["longitud"])
       };
     }).filter(c => !isNaN(c.lat) && !isNaN(c.lng));
 
@@ -410,6 +411,7 @@ loadGoogleMaps(initMap);
 
 </body>
 </html>
+
 
 
 
